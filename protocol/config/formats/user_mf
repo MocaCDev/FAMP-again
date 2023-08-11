@@ -1,0 +1,8 @@
+.PHONY: run
+.PHONY: clean
+
+run:
+	cd protocol && make
+
+clean:
+	cd protocol && make clean

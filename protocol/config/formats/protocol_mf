@@ -1,0 +1,47 @@
+.PHONY: build
+.PHONY: run
+.PHONY: clean
+.PHONY: bin/second_stage.bin
+.PHONY: clean_second_stage
+.PHONY: bin/mbr_part_table.bin
+.PHONY: clean_mbr_part_table
+.PHONY: ../%s
+.PHONY: clean_kernel_bin
+
+FLAGS = -std=c++20 -masm=intel -O1 -Wno-error -c -nostdinc -nostdlib -fno-builtin -fno-stack-protector -ffreestanding -m32
+
+build: bin/mbr_part_table.bin bin/second_stage.bin
+	cd config && make mbr
+	nasm boot/mbr.s -f bin -o bin/mbr.bin
+	cd config && make disk_image
+
+run:
+	qemu-system-i386 -m 4G -drive format=raw,file=bin/OS.img
+
+clean_kernel_bin:
+	rm -rf bin/kernel.bin
+	rm -rf bin/kernel.o
+	rm -rf bin/kernel.out
+
+clean_mbr_part_table:
+	rm -rf bin/mbr_part_table.bin
+	rm -rf bin/mbr_part_table.o
+	rm -rf bin/mbr_part_table.out
+
+bin/mbr_part_table.bin:
+	g++ $(FLAGS) -I include/ -o bin/mbr_part_table.o boot/mbr_part_table.cpp
+	ld -m elf_i386 -Tlinker/mbr_part_table.ld -nostdlib --nmagic -o bin/mbr_part_table.out bin/mbr_part_table.o
+	objcopy -O binary bin/mbr_part_table.out bin/mbr_part_table.bin
+
+clean_second_stage:
+	rm -rf bin/second_stage.bin
+	rm -rf bin/second_stage.o
+	rm -rf bin/second_stage.out
+
+bin/second_stage.bin: clean_second_stage
+	g++ $(FLAGS) -I include/ -o bin/second_stage.o boot/second_stage.cpp
+	ld -m elf_i386 -Tlinker/second_stage.ld -nostdlib --nmagic -o bin/second_stage.out bin/second_stage.o
+	objcopy -O binary bin/second_stage.out bin/second_stage.bin
+
+clean:
+	cd config && make old_makefile
