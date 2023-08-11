@@ -61,7 +61,6 @@ struct token
     ~token()
     {
         if(token_value) delete token_value;
-        token_value = nullptr;
     }
 };
 
@@ -113,8 +112,6 @@ struct lexer
     ~lexer()
     {
         if(src) delete src;
-
-        src = nullptr;
     }
 };
 
@@ -373,12 +370,6 @@ public:
     {
         if(ylexer) ylexer->delete_instance<struct lexer> (ylexer);
         if(ytoken) delete ytoken;
-
-        ytoken = nullptr;
-
-        //std::cout << "\n[DEBUG]\tDeleted instance of `ylexer`." << std::endl;
-        //std::cout << "[DEBUG]\tDeleted instance of `ytoken`." << std::endl;
-        //std::cout << "[DEBUG]\tDeleted instance of class `yaml_lexer`." << std::endl;
     }
 };
 

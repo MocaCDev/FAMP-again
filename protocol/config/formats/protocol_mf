@@ -5,6 +5,8 @@
 .PHONY: clean_second_stage
 .PHONY: bin/mbr_part_table.bin
 .PHONY: clean_mbr_part_table
+.PHONY: bin/fs_worker.bin
+.PHONY: clean_fs_worker
 .PHONY: ../%s
 .PHONY: clean_kernel_bin
 
@@ -12,7 +14,7 @@
 
 FLAGS = -std=c++20 -masm=intel -O1 -Wno-error -c -nostdinc -nostdlib -fno-builtin -fno-stack-protector -ffreestanding -m32
 
-build: bin/mbr_part_table.bin bin/second_stage.bin
+build: bin/mbr_part_table.bin bin/fs_worker.bin bin/second_stage.bin
 	cd config && make mbr
 	nasm boot/mbr.s -f bin -o bin/mbr.bin
 	cd config && make disk_image
@@ -25,15 +27,27 @@ clean_kernel_bin:
 	rm -rf bin/kernel.o
 	rm -rf bin/kernel.out
 
+# TODO: Add `bin/kernel.bin`
+
 clean_mbr_part_table:
 	rm -rf bin/mbr_part_table.bin
 	rm -rf bin/mbr_part_table.o
 	rm -rf bin/mbr_part_table.out
 
-bin/mbr_part_table.bin:
+bin/mbr_part_table.bin: clean_mbr_part_table
 	g++ $(FLAGS) -I include/ -o bin/mbr_part_table.o boot/mbr_part_table.cpp
 	ld -m elf_i386 -Tlinker/mbr_part_table.ld -nostdlib --nmagic -o bin/mbr_part_table.out bin/mbr_part_table.o
 	objcopy -O binary bin/mbr_part_table.out bin/mbr_part_table.bin
+
+clean_fs_worker:
+	rm -rf bin/fs_worker.bin
+	rm -rf bin/fs_worker.o
+	rm -rf bin/fs_worker.out
+
+bin/fs_worker.bin: clean_fs_worker
+	g++ $(FLAGS) -I include/ -o bin/fs_worker.o boot/fs_worker.cpp
+	ld -m elf_i386 -Tlinker/fs_worker.ld -nostdlib --nmagic -o bin/fs_worker.out bin/fs_worker.o
+	objcopy -O binary bin/fs_worker.out bin/fs_worker.bin
 
 clean_second_stage:
 	rm -rf bin/second_stage.bin

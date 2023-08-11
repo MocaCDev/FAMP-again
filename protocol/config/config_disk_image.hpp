@@ -15,12 +15,14 @@ namespace ConfigDiskImage
     /* All binaries that the disk image will consist of. */
     cpint8 mbr_binary = (cpint8) initiate_path((pint8)"../bin/", (pint8)"mbr.bin");
     cpint8 mbr_part_table_bin = (cpint8) initiate_path((pint8)"../bin/", (pint8)"mbr_part_table.bin");
+    cpint8 fs_worker_bin = (cpint8) initiate_path((pint8) "../bin/", (pint8)"fs_worker.bin");
     cpint8 second_stage_bin = (cpint8) initiate_path((pint8)"../bin/", (pint8)"second_stage.bin");
 
     enum class program
     {
         MBR,
         MBR_PART_TABLE,
+        FS_WORKER,
         SECOND_STAGE
     };
 
@@ -173,6 +175,38 @@ namespace ConfigDiskImage
                 return file_size;
             };
 
+            const auto get_file_data = [&bin_file_data, &bin_file, &get_file_size, this] ()
+            {
+                size_t file_size = get_file_size(bin_file);
+
+                if(bin_file_data)
+                    free(bin_file_data);
+
+                bin_file_data = (puint8) calloc(file_size, sizeof(*bin_file_data));
+                fread(bin_file_data, file_size, sizeof(*bin_file_data), bin_file);
+                return file_size;
+            };
+
+            const auto init_adjucment = [&bin_file, &mem_stamp, &create_padding, this] (cpint8 filename, uint16 mem_id, bool has_subheading)
+            {
+                bin_file = fopen(filename, "rb");
+                FAMP_ASSERT(bin_file,
+                    "\nError opening `%s`.\n", filename)
+                
+                size_t padding = create_padding(bin_file, has_subheading);
+
+                return padding;
+            };
+
+            const auto init_subheading = [this] (struct FAMP_PROTOCOL_SUBHEADING &sheader, uint32 psize_in_bytes, uint16 psize_in_sectors, bool is_asm_program)
+            {
+                sheader.SubHeadingSig = revert_value<uint32> (FAMP_SUBHEADER_SIGNATURE);
+                sheader.padding = 0x0000;
+                sheader.ProgramSizeInBytes = psize_in_bytes;
+                sheader.ProgramSizeInSectors = psize_in_sectors;
+                sheader.IsAsmProgram = is_asm_program;
+            };
+
             switch(binary_program)
             {
                 case program::MBR: {
@@ -204,7 +238,6 @@ namespace ConfigDiskImage
                             "\nInvalid MBR start ID in section found.\n")
 
                         delete mbr_outline;
-                        mbr_outline = nullptr;
 
                         /* check the entries. */
                         pentry = new struct partition_entry;
@@ -230,7 +263,6 @@ namespace ConfigDiskImage
                         }
 
                         delete pentry;
-                        pentry = nullptr;
 
                         disk_image_size += 512;
                         disk_image_pos = 512;
@@ -247,41 +279,34 @@ namespace ConfigDiskImage
                     return;
                 }
                 case program::MBR_PART_TABLE: {
-                    bin_file = fopen(mbr_part_table_bin, "rb");
-                    FAMP_ASSERT(bin_file,
-                        "\nError opening up `%s`.\n", mbr_part_table_bin)
-                    
-                    mem_stamp.MemID = FAMP_MEM_STAMP_PTBLE_P;
-
-                    /* Make sure the binary file is a multiple of 512. */
-                    size_t padding = create_padding(bin_file, false);
+                    size_t padding = init_adjucment(mbr_part_table_bin, FAMP_MEM_STAMP_PTBLE_P, false);
 
                     /* Read in the binary data that will be written before the padding/memory stamp. */
-                    uint8 bin_data[disk_image_size - 512];
+                    size_t file_size = get_file_data();
+                    /*uint8 bin_data[disk_image_size - 512];
                     memset(bin_data, 0, (disk_image_size - 512) - padding);
                     fread(&bin_data, (disk_image_size - 512) - padding, sizeof(uint8), bin_file);
-                    fclose(bin_file);
+                    */fclose(bin_file);
                     
                     {
                         /* Open the binary file to be written to. */
                         bin_file = fopen(mbr_part_table_bin, "wb");
                     
                         /* Write the binary data back to the file. */
-                        fwrite(&bin_data, (disk_image_size - 512) - padding, sizeof(uint8), bin_file);
+                        fwrite(bin_file_data, (disk_image_size - 512) - padding, sizeof(*bin_file_data), bin_file);
 
                         /* Write the padding/memory stamp to the file. */
                         fwrite(padding_val, padding-sizeof(mem_stamp), sizeof(uint8), bin_file);
                         fwrite(&mem_stamp, 1, sizeof(mem_stamp), bin_file);
 
                         delete padding_val;
-                        padding_val = nullptr;
 
                         fclose(bin_file);
                     }
 
                     /* Get the data into the disk image array. */
                     bin_file = fopen(mbr_part_table_bin, "rb");
-                    size_t file_size = get_file_size(bin_file);
+                    file_size = get_file_size(bin_file);
 
                     disk_image_data = (puint8) realloc(
                         disk_image_data,
@@ -294,44 +319,75 @@ namespace ConfigDiskImage
                     disk_image_pos += file_size;
 
                     delete padding_val;
+                    if(bin_file_data) free(bin_file_data);
 
                     return;
                 }
-                case program::SECOND_STAGE: {
-                    bin_file = fopen(second_stage_bin, "rb");
-                    FAMP_ASSERT(bin_file,
-                        "\nError opening up `%s`.\n", second_stage_bin)
+                case program::FS_WORKER: {
+                    size_t padding = init_adjucment(fs_worker_bin, FAMP_MEM_STAMP_FS_WORKER, true);
+                    size_t file_size = get_file_data();
+                    fclose(bin_file);
 
-                    mem_stamp.MemID = FAMP_MEM_STAMP_SECOND_STAGE;
+                    if((file_size + sizeof(mem_stamp) + FAMP_SUBHEADING_SIZE + padding) < 512)
+                        padding = (512 - file_size) - sizeof(mem_stamp) - FAMP_SUBHEADING_SIZE;
+
+                    sheading = new struct FAMP_PROTOCOL_SUBHEADING;
+                    init_subheading(
+                        *sheading,
+                        (file_size + padding + FAMP_SUBHEADING_SIZE + 8),
+                        (file_size + padding + FAMP_SUBHEADING_SIZE + 8) / 512,
+                        false
+                    );
+
+                    {
+                        bin_file = fopen(fs_worker_bin, "wb");
+
+                        fwrite(sheading, 1, sizeof(*sheading), bin_file);
+                        fwrite(bin_file_data, file_size, sizeof(*bin_file_data), bin_file);
+                        fwrite(padding_val, padding, sizeof(*padding_val), bin_file);
+                        fwrite(&mem_stamp, 1, sizeof(mem_stamp), bin_file);
+                        fclose(bin_file);
+                    }
+
+                    bin_file = fopen(fs_worker_bin, "rb");
+
+                    disk_image_data = (puint8) realloc(
+                        disk_image_data,
+                        (disk_image_size + get_file_size(bin_file)) * sizeof(*disk_image_data)
+                    );
+                    fread(&disk_image_data[disk_image_pos], get_file_size(bin_file), sizeof(*disk_image_data), bin_file);
+                    fseek(bin_file, 0, SEEK_SET);
+
+                    disk_image_pos += get_file_size(bin_file);
+                    fclose(bin_file);
+
+                    delete sheading;
+                    if(padding_val) delete padding_val;
+                    if(bin_file_data) free(bin_file_data);
+                    return;
+                }
+                case program::SECOND_STAGE: {
+                    size_t padding = init_adjucment(second_stage_bin, FAMP_MEM_STAMP_SECOND_STAGE, true);
                     
                     /* Pad the binary. */
-                    size_t padding = create_padding(bin_file, true);
-                    size_t file_size = get_file_size(bin_file);
+                    size_t file_size = get_file_data();
+                    fclose(bin_file);
 
                     /* Make sure the second stage is multiple of 1024 bytes. */
-                    FAMP_ASSERT(get_file_size(bin_file) < 1024,
+                    FAMP_ASSERT(file_size < 1024,
                         "\nThe second stage takes up more than 2 sectors (1024 bytes).\n")
                     
                     if((file_size + sizeof(mem_stamp) + FAMP_SUBHEADING_SIZE + padding) < 1024)
                         padding = (1024 - file_size) - sizeof(mem_stamp) - FAMP_SUBHEADING_SIZE;
-                    
-                    /* Get the binary data. */
-                    uint8 bin_data[file_size];
-                    memset(bin_data, 0, file_size);
-                    fread(&bin_data, file_size, sizeof(uint8), bin_file);
-                    fclose(bin_file);
 
                     /* Configure the subheading. */
                     sheading = new struct FAMP_PROTOCOL_SUBHEADING;
-
-                    /* Set the values for the subheader signature. */
-                    sheading->SubHeadingSig = revert_value<uint32> (FAMP_SUBHEADER_SIGNATURE);
-                    sheading->padding = 0x0000;
-
-                    /* TODO: remove the usage of `get_file_size`. For now, it's whatever. */
-                    sheading->ProgramSizeInBytes = file_size + padding + FAMP_SUBHEADING_SIZE + 8;
-                    sheading->ProgramSizeInSectors = (file_size + padding + FAMP_SUBHEADING_SIZE + sizeof(mem_stamp)) / 512;
-                    sheading->IsAsmProgram = false;
+                    init_subheading(
+                        *sheading,
+                        (file_size + padding + FAMP_SUBHEADING_SIZE + 8),
+                        (file_size + padding + FAMP_SUBHEADING_SIZE + sizeof(mem_stamp)) / 512,
+                        false
+                    );
                     
                     {
                         /* Reopen the second stage binary file. */
@@ -341,7 +397,7 @@ namespace ConfigDiskImage
                         fwrite(sheading, 1, sizeof(*sheading), bin_file);
 
                         /* Write the rest of the value (including padding/memory stamp). */
-                        fwrite(&bin_data, file_size, sizeof(uint8), bin_file);
+                        fwrite(bin_file_data, file_size, sizeof(*bin_file_data), bin_file);
                         fwrite(padding_val, padding, sizeof(*padding_val), bin_file);
                         fwrite(&mem_stamp, 1, sizeof(mem_stamp), bin_file);
 
@@ -358,16 +414,12 @@ namespace ConfigDiskImage
                     fread(&disk_image_data[disk_image_pos], get_file_size(bin_file), sizeof(*disk_image_data), bin_file);
                     fseek(bin_file, 0, SEEK_SET);
 
-                    delete sheading;
-                    sheading = nullptr;
-
-                    if(padding_val) delete padding_val;
-                    padding_val = nullptr;
-
                     disk_image_pos += get_file_size(bin_file);
                     fclose(bin_file);
 
-                    delete padding_val;
+                    delete sheading;
+                    if(padding_val) delete padding_val;
+                    if(bin_file_data) free(bin_file_data);
 
                     return;
                 }

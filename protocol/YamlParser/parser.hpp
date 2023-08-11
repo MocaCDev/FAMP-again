@@ -36,7 +36,6 @@ struct parser
             ylexer->delete_instance<struct token> (ytoken);
             ylexer->delete_instance<yaml_lexer> (ylexer);
         }
-        ylexer = nullptr;
     }
 };
 
@@ -90,7 +89,6 @@ private:
 
                 memset(user_defined_var, 0, strlen((cpint8) user_defined_var));
                 delete user_defined_var;
-                user_defined_var = nullptr;
                 break;
             }
             case YamlTokens::YamlEOF: {
@@ -240,12 +238,7 @@ public:
     ~yaml_parser()
     {
         if(yparser) yparser->delete_instance<struct parser> (yparser);
-        yparser = nullptr;
-
         if(ydata) ydata->delete_instance<yaml_data> (ydata);
-        ydata = nullptr;
-
-        //std::cout << "[DEBUG -> PARSER]\tDeleted `yaml_parser` instance." << std::endl;
     }
 };
 

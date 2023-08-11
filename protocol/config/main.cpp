@@ -54,6 +54,8 @@ int main(int args, char *argv[])
         abin.adjust();
         abin.switch_binary_program(program::MBR_PART_TABLE);
         abin.adjust();
+        abin.switch_binary_program(program::FS_WORKER);
+        abin.adjust();
         abin.switch_binary_program(program::SECOND_STAGE);
         abin.adjust();
 

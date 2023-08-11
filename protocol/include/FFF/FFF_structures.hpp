@@ -35,6 +35,7 @@ uint32 FAMP_SUBHEADER_SIGNATURE           = (uint32) 0x46534844;       /* FSHD *
 /* Memory stamp information. */
 #define FAMP_MEM_STAMP_PTBLE_P        0x10F0          /* PTBLE_P - Partition Table Program ID */
 #define FAMP_MEM_STAMP_SECOND_STAGE   0x20F0
+#define FAMP_MEM_STAMP_FS_WORKER      0x30F0
 #define FAMP_MEM_STAMP_FEND_SIG       0x46454E44;
 
 namespace FFF_Structures

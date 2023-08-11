@@ -121,7 +121,6 @@ namespace ConfigFiles
             
             end:
             fclose(source_file);
-            source_file = nullptr;
             delete format;
         }
 
@@ -131,7 +130,6 @@ namespace ConfigFiles
         {
             if(instance)
                 delete instance;
-            
             instance = nullptr;
         }
 
