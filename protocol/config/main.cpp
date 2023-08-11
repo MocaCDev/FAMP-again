@@ -55,9 +55,10 @@ int main(int args, char *argv[])
         abin.switch_binary_program(program::MBR_PART_TABLE);
         abin.adjust();
         abin.switch_binary_program(program::SECOND_STAGE);
-        //abin.adjust();
+        abin.adjust();
 
         config_image *cimg = dynamic_cast<config_image *> (&abin);
+        cimg->write_disk_image();
 
         goto end;
     }

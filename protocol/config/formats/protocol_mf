@@ -8,6 +8,8 @@
 .PHONY: ../%s
 .PHONY: clean_kernel_bin
 
+# -m 4G -drive 
+
 FLAGS = -std=c++20 -masm=intel -O1 -Wno-error -c -nostdinc -nostdlib -fno-builtin -fno-stack-protector -ffreestanding -m32
 
 build: bin/mbr_part_table.bin bin/second_stage.bin
@@ -16,7 +18,7 @@ build: bin/mbr_part_table.bin bin/second_stage.bin
 	cd config && make disk_image
 
 run:
-	qemu-system-i386 -m 4G -drive format=raw,file=bin/OS.img
+	qemu-system-i386 bin/OS.img
 
 clean_kernel_bin:
 	rm -rf bin/kernel.bin

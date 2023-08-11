@@ -1,6 +1,8 @@
 [org 0x7C00]
 use16
 
+jmp 0x0:start
+
 FAMP_spec_MBR_header:
     .sig                        db 'FAMP', 0x0, 0x0
     .rev                        dw 0x1000, 0x0
@@ -12,7 +14,6 @@ FAMP_spec_MBR_header:
 	.filesystem_used			db 0x%X
 	.in_production				db 0x%X
     .end                        db 'EE', 0x0, 0x0
-
 
 struc mbr_partition_table_entry
 	; Is this MBR partition table entry bootable?(is it describing the rest of the bootloader?)
@@ -62,8 +63,6 @@ iend
 FAMP_spec_MBR_start:
     .id         dw 0xF100
     .id_name    db 'FENT', 0x0, 0x0
-
-jmp 0x0:start
 
 start:
 	xor ax, ax
@@ -125,5 +124,4 @@ CreateEntry	3, 0x00, 0x00, 0x01, 0, 0x00, 0x00
 
 CreateEntry	4, 0x00, 0x00, 0x01, 0, 0x00, 0x00
 
-times 510 - ($ - $$) db 0x0
 dw 0xAA55

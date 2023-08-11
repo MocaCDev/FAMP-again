@@ -2,6 +2,12 @@
 #define FAMP_FILE_FORMAT_STRUCTURES_H
 #include "../common.hpp"
 
+/* The disk image header is at an offset of 5 in the binary file.
+ * Reason being, there is a jmp instruction at the beginning of the disk
+ * image that jumps to the "start" label in the MBR.
+ * */
+#define FAMP_DISK_IMAGE_HEADER_OFFSET           0x05
+
 /* Size of sub heading. */
 #define FAMP_SUBHEADING_SIZE                    0x0D
 
@@ -16,7 +22,7 @@
 /* Sub heading header information. 
  * Sub headings reside at the beginning of every program following the MBR.
  * */
-#define FAMP_SUBHEADER_SIGNATURE                0x46534844       /* FSHD */
+uint32 FAMP_SUBHEADER_SIGNATURE           = (uint32) 0x46534844;       /* FSHD */
 
 /* Section IDs that can be found in the "outline" of an assembly
  * program that requires critical enforecement of the protocol. 
@@ -28,7 +34,8 @@
 
 /* Memory stamp information. */
 #define FAMP_MEM_STAMP_PTBLE_P        0x10F0          /* PTBLE_P - Partition Table Program ID */
-uint32 FAMP_MEM_STAMP_FEND_SIG      = (uint32) 0x46454E44;
+#define FAMP_MEM_STAMP_SECOND_STAGE   0x20F0
+#define FAMP_MEM_STAMP_FEND_SIG       0x46454E44;
 
 namespace FFF_Structures
 {
@@ -86,7 +93,7 @@ namespace FFF_Structures
         FAMP_PROTOCOL_SUBHEADING() = default;
         ~FAMP_PROTOCOL_SUBHEADING() = default;
         #endif
-    };
+    } __attribute__((packed));
 
     /* Data over the section that is occurring.
      * 2-byte ID signifying what the section is/what it is doing, alongside a
@@ -107,7 +114,7 @@ namespace FFF_Structures
     struct FAMP_PROTOCOL_MEMORY_STAMP
     {
         uint16          MemID;
-        uint32          MemIDSig;
+        uint8           MemIDSig[4] = {'F', 'E', 'N', 'D'};
         uint16          padding;
     } __attribute__((packed));
     //#endif
