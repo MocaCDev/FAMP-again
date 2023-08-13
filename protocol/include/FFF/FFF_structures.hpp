@@ -116,7 +116,7 @@ namespace FFF_Structures
     {
         uint16          MemID;
         uint8           MemIDSig[4] = {'F', 'E', 'N', 'D'};
-        uint16          padding;
+        uint16          padding = 0x0000;
     } __attribute__((packed));
     //#endif
 }

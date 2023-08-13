@@ -2,6 +2,7 @@
 .PHONY: old_makefile
 .PHONY: new_makefile
 .PHONY: mbr
+.PHONY: filesystem
 .PHONY: disk_image
 
 FLAGS = -fsanitize=leak -std=c++20 -Wall
@@ -20,6 +21,9 @@ old_makefile:
 
 mbr:
 	../bin/config.o mbr
+
+filesystem:
+	../bin/config.o fs
 
 disk_image:
 	../bin/config.o dimg

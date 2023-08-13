@@ -100,15 +100,6 @@ struct lexer
         curr_char = src[index];
     }
 
-    template<typename T>
-        requires std::is_same<T, struct lexer>::value
-    void delete_instance(T *instance)
-    {
-        if(instance)
-            delete instance;
-        instance = nullptr;
-    }
-
     ~lexer()
     {
         if(src) delete src;
@@ -355,20 +346,9 @@ public:
         }
     }
 
-    template<typename T>
-        requires std::is_same<T, struct lexer>::value
-            || std::is_same<T, struct token>::value
-            || std::is_same<T, yaml_lexer>::value
-    void delete_instance(T *instance)
-    {
-        if(instance)
-            delete instance;
-        instance = nullptr;
-    }
-
     ~yaml_lexer()
     {
-        if(ylexer) ylexer->delete_instance<struct lexer> (ylexer);
+        if(ylexer) delete ylexer;
         if(ytoken) delete ytoken;
     }
 };

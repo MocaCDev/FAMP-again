@@ -122,15 +122,6 @@ struct data
         return false;
     }
 
-    template<typename T>
-        requires std::is_same<T, struct data>::value
-    void delete_instance(T *instance)
-    {
-        if(instance)
-            delete instance;
-        instance = nullptr;
-    }
-
     ~data()
     {
         if(user_defined) delete user_defined;
@@ -208,29 +199,19 @@ public:
         yaml_file_data_size++;
     }
 
-    template<typename T>
-        requires std::is_same<T, struct data>::value
-            || std::is_same<T, yaml_data>::value
-    void delete_instance(T *instance)
-    {
-        if(instance)
-            delete instance;
-        instance = nullptr;
-    }
-
     ~yaml_data()
     {
         yaml_file_data = all_yaml_data;
 
         while(yaml_file_data->next)
         {
-            yaml_file_data->delete_instance<struct data> (yaml_file_data);
+            delete yaml_file_data;
             yaml_file_data = yaml_file_data->next;
             delete yaml_file_data->previous;
         }
 
         if(yaml_file_data)
-            yaml_file_data->delete_instance<struct data> (yaml_file_data);
+            delete yaml_file_data;
         yaml_file_data = nullptr;
         all_yaml_data = nullptr;
     }

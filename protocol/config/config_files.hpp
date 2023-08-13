@@ -1,6 +1,8 @@
 #ifndef FAMP_CONFIG_FILES_H
 #define FAMP_CONFIG_FILES_H
 
+using namespace YamlParser;
+
 namespace ConfigFiles
 {
     cpint8 mbr_format = (cpint8) initiate_path((pint8)"formats/", (pint8)"test_mbr");
@@ -13,7 +15,8 @@ namespace ConfigFiles
         UserMakefile,
         ProtocolMakefile,
         MBR,
-        OldMakefile
+        OldMakefile,
+        None
     };
 
     class ConfigureFiles
@@ -21,6 +24,9 @@ namespace ConfigFiles
     private:
         FILE *config_file;
         FileToConfigure file_being_configured;
+
+        /* Needed to get the yaml file data. */
+        yaml_parser &ypars = *new yaml_parser("../../boot.yaml");
 
         inline puint8 get_file_data()
         {
@@ -61,6 +67,7 @@ namespace ConfigFiles
             
             switch(ftc)
             {
+                case FileToConfigure::None: break;
                 case FileToConfigure::UserMakefile: config_file = fopen(user_makefile, "r");break;
                 case FileToConfigure::ProtocolMakefile: config_file = fopen(protocol_makefile, "r");break;
                 case FileToConfigure::MBR: config_file = fopen(mbr_format, "r");break;
@@ -94,7 +101,13 @@ namespace ConfigFiles
                 if(file_being_configured == FileToConfigure::ProtocolMakefile)
                 {
                     sprintf((pint8) completed_format, (cpint8) format,
-                        yod.kernel_bin_filename);
+                        yod.kernel_bin_filename, yod.kernel_bin_filename, yod.kernel_o_filename, yod.kernel_bin_filename,
+                        yod.kernel_bin_filename,
+                        yod.kernel_o_filename, yod.kernel_source_filename,
+                        yod.kernel_bin_filename,
+                        yod.bin_folder, yod.bin_folder
+                    );
+                    printf("%lX, %lX\n", strlen((cpint8) format), strlen((cpint8) completed_format));
                     
                     goto write;
                 }
@@ -122,15 +135,6 @@ namespace ConfigFiles
             end:
             fclose(source_file);
             delete format;
-        }
-
-        template<typename T>
-            requires std::is_same<T, ConfigureFiles*>::value
-        void delete_instance(T instance)
-        {
-            if(instance)
-                delete instance;
-            instance = nullptr;
         }
 
         ~ConfigureFiles()

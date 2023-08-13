@@ -14,7 +14,7 @@
 
 FLAGS = -std=c++20 -masm=intel -O1 -Wno-error -c -nostdinc -nostdlib -fno-builtin -fno-stack-protector -ffreestanding -m32
 
-build: bin/mbr_part_table.bin bin/fs_worker.bin bin/second_stage.bin
+build: bin/mbr_part_table.bin bin/fs_worker.bin bin/second_stage.bin ../%s
 	cd config && make mbr
 	nasm boot/mbr.s -f bin -o bin/mbr.bin
 	cd config && make disk_image
@@ -23,11 +23,16 @@ run:
 	qemu-system-i386 bin/OS.img
 
 clean_kernel_bin:
-	rm -rf bin/kernel.bin
-	rm -rf bin/kernel.o
+	rm -rf ../%s
+	rm -rf ../%s
 	rm -rf bin/kernel.out
 
 # TODO: Add `bin/kernel.bin`
+../%s: clean_kernel_bin
+	g++ $(FLAGS) -I include/ -o ../%s ../%s
+	ld -m elf_i386 -Tlinker/mbr_part_table.ld -nostdlib --nmagic -o bin/kernel.out bin/mbr_part_table.o
+	objcopy -O binary bin/kernel.out ../%s
+	cd config && make filesystem
 
 clean_mbr_part_table:
 	rm -rf bin/mbr_part_table.bin
@@ -61,3 +66,5 @@ bin/second_stage.bin: clean_second_stage
 
 clean:
 	cd config && make old_makefile
+	rm -rf ../%s/*.o
+	rm -rf ../%s/*.bin

@@ -154,9 +154,7 @@ namespace ConfigDiskImage
             FILE *bin_file = nullptr;
             puint8 bin_file_data = nullptr;
             puint8 padding_val = nullptr;
-            struct FAMP_PROTOCOL_MEMORY_STAMP mem_stamp = {
-                .padding = 0x0000
-            };
+            struct FAMP_PROTOCOL_MEMORY_STAMP mem_stamp;
 
             const auto create_padding = [&padding_val, this] (FILE* bin_file, bool has_subheading)
             {
@@ -166,7 +164,7 @@ namespace ConfigDiskImage
                 return padding;
             };
 
-            const auto get_file_size = [] (FILE *bin_file)
+            constexpr auto get_file_size = [] (FILE *bin_file)
             {
                 fseek(bin_file, 0, SEEK_END);
                 size_t file_size = ftell(bin_file);
@@ -175,7 +173,7 @@ namespace ConfigDiskImage
                 return file_size;
             };
 
-            const auto get_file_data = [&bin_file_data, &bin_file, &get_file_size, this] ()
+            const auto get_file_data = [&bin_file_data, &bin_file, &get_file_size] ()
             {
                 size_t file_size = get_file_size(bin_file);
 
@@ -187,7 +185,7 @@ namespace ConfigDiskImage
                 return file_size;
             };
 
-            const auto init_adjucment = [&bin_file, &mem_stamp, &create_padding, this] (cpint8 filename, uint16 mem_id, bool has_subheading)
+            const auto init_adjustment = [&bin_file, &mem_stamp, &create_padding] (cpint8 filename, uint16 mem_id, bool has_subheading)
             {
                 bin_file = fopen(filename, "rb");
                 FAMP_ASSERT(bin_file,
@@ -198,13 +196,42 @@ namespace ConfigDiskImage
                 return padding;
             };
 
-            const auto init_subheading = [this] (struct FAMP_PROTOCOL_SUBHEADING &sheader, uint32 psize_in_bytes, uint16 psize_in_sectors, bool is_asm_program)
+            constexpr auto init_subheading = [] (struct FAMP_PROTOCOL_SUBHEADING &sheader, uint32 psize_in_bytes, uint16 psize_in_sectors, bool is_asm_program)
             {
                 sheader.SubHeadingSig = revert_value<uint32> (FAMP_SUBHEADER_SIGNATURE);
                 sheader.padding = 0x0000;
                 sheader.ProgramSizeInBytes = psize_in_bytes;
                 sheader.ProgramSizeInSectors = psize_in_sectors;
                 sheader.IsAsmProgram = is_asm_program;
+            };
+
+            const auto read_into_disk_image = [&bin_file, &get_file_size, this] (cpint8 filename)
+            {
+                bin_file = fopen(filename, "rb");
+
+                disk_image_data = (puint8) realloc(
+                    disk_image_data,
+                    (disk_image_size + get_file_size(bin_file)) * sizeof(*disk_image_data)
+                );
+
+                fread(&disk_image_data[disk_image_pos], get_file_size(bin_file), sizeof(*disk_image_data), bin_file);
+                fseek(bin_file, 0, SEEK_SET);
+
+                disk_image_pos += get_file_size(bin_file);
+                fclose(bin_file);
+            };
+
+            const auto write_new_binary = [&bin_file_data, &bin_file, &padding_val] (bool has_subheading, struct FAMP_PROTOCOL_SUBHEADING &sheading, struct FAMP_PROTOCOL_MEMORY_STAMP mem_stamp, size_t data_size, size_t padding_size)
+            {
+                if(has_subheading)
+                    fwrite(&sheading, 1, sizeof(struct FAMP_PROTOCOL_SUBHEADING), bin_file);
+                
+                fwrite(bin_file_data, data_size, sizeof(*bin_file_data), bin_file);
+                fwrite(padding_val, padding_size, sizeof(uint8), bin_file);
+                fwrite(&mem_stamp, 1, sizeof(mem_stamp), bin_file);
+                fclose(bin_file);
+
+                delete padding_val;
             };
 
             switch(binary_program)
@@ -279,44 +306,27 @@ namespace ConfigDiskImage
                     return;
                 }
                 case program::MBR_PART_TABLE: {
-                    size_t padding = init_adjucment(mbr_part_table_bin, FAMP_MEM_STAMP_PTBLE_P, false);
+                    size_t padding = init_adjustment(mbr_part_table_bin, FAMP_MEM_STAMP_PTBLE_P, false);
 
                     /* Read in the binary data that will be written before the padding/memory stamp. */
-                    size_t file_size = get_file_data();
-                    /*uint8 bin_data[disk_image_size - 512];
-                    memset(bin_data, 0, (disk_image_size - 512) - padding);
-                    fread(&bin_data, (disk_image_size - 512) - padding, sizeof(uint8), bin_file);
-                    */fclose(bin_file);
+                    get_file_data();
+                    fclose(bin_file);
                     
                     {
                         /* Open the binary file to be written to. */
                         bin_file = fopen(mbr_part_table_bin, "wb");
-                    
-                        /* Write the binary data back to the file. */
-                        fwrite(bin_file_data, (disk_image_size - 512) - padding, sizeof(*bin_file_data), bin_file);
 
-                        /* Write the padding/memory stamp to the file. */
-                        fwrite(padding_val, padding-sizeof(mem_stamp), sizeof(uint8), bin_file);
-                        fwrite(&mem_stamp, 1, sizeof(mem_stamp), bin_file);
-
-                        delete padding_val;
-
-                        fclose(bin_file);
+                        write_new_binary(
+                            false,
+                            *sheading,
+                            mem_stamp,
+                            (disk_image_size - 512) - padding,
+                            padding - sizeof(mem_stamp)
+                        );
                     }
 
                     /* Get the data into the disk image array. */
-                    bin_file = fopen(mbr_part_table_bin, "rb");
-                    file_size = get_file_size(bin_file);
-
-                    disk_image_data = (puint8) realloc(
-                        disk_image_data,
-                        (disk_image_size + file_size) * sizeof(*disk_image_data)
-                    );
-
-                    fread(&disk_image_data[disk_image_pos], file_size, sizeof(*disk_image_data), bin_file);
-                    fclose(bin_file);
-
-                    disk_image_pos += file_size;
+                    read_into_disk_image(mbr_part_table_bin);
 
                     delete padding_val;
                     if(bin_file_data) free(bin_file_data);
@@ -324,7 +334,7 @@ namespace ConfigDiskImage
                     return;
                 }
                 case program::FS_WORKER: {
-                    size_t padding = init_adjucment(fs_worker_bin, FAMP_MEM_STAMP_FS_WORKER, true);
+                    size_t padding = init_adjustment(fs_worker_bin, FAMP_MEM_STAMP_FS_WORKER, true);
                     size_t file_size = get_file_data();
                     fclose(bin_file);
 
@@ -342,24 +352,16 @@ namespace ConfigDiskImage
                     {
                         bin_file = fopen(fs_worker_bin, "wb");
 
-                        fwrite(sheading, 1, sizeof(*sheading), bin_file);
-                        fwrite(bin_file_data, file_size, sizeof(*bin_file_data), bin_file);
-                        fwrite(padding_val, padding, sizeof(*padding_val), bin_file);
-                        fwrite(&mem_stamp, 1, sizeof(mem_stamp), bin_file);
-                        fclose(bin_file);
+                        write_new_binary(
+                            true,
+                            *sheading,
+                            mem_stamp,
+                            file_size,
+                            padding
+                        );
                     }
 
-                    bin_file = fopen(fs_worker_bin, "rb");
-
-                    disk_image_data = (puint8) realloc(
-                        disk_image_data,
-                        (disk_image_size + get_file_size(bin_file)) * sizeof(*disk_image_data)
-                    );
-                    fread(&disk_image_data[disk_image_pos], get_file_size(bin_file), sizeof(*disk_image_data), bin_file);
-                    fseek(bin_file, 0, SEEK_SET);
-
-                    disk_image_pos += get_file_size(bin_file);
-                    fclose(bin_file);
+                    read_into_disk_image(fs_worker_bin);
 
                     delete sheading;
                     if(padding_val) delete padding_val;
@@ -367,7 +369,7 @@ namespace ConfigDiskImage
                     return;
                 }
                 case program::SECOND_STAGE: {
-                    size_t padding = init_adjucment(second_stage_bin, FAMP_MEM_STAMP_SECOND_STAGE, true);
+                    size_t padding = init_adjustment(second_stage_bin, FAMP_MEM_STAMP_SECOND_STAGE, true);
                     
                     /* Pad the binary. */
                     size_t file_size = get_file_data();
@@ -393,29 +395,16 @@ namespace ConfigDiskImage
                         /* Reopen the second stage binary file. */
                         bin_file = fopen(second_stage_bin, "wb");
 
-                        /* Write the subheading. */
-                        fwrite(sheading, 1, sizeof(*sheading), bin_file);
-
-                        /* Write the rest of the value (including padding/memory stamp). */
-                        fwrite(bin_file_data, file_size, sizeof(*bin_file_data), bin_file);
-                        fwrite(padding_val, padding, sizeof(*padding_val), bin_file);
-                        fwrite(&mem_stamp, 1, sizeof(mem_stamp), bin_file);
-
-                        fclose(bin_file);
+                        write_new_binary(
+                            true,
+                            *sheading,
+                            mem_stamp,
+                            file_size,
+                            padding
+                        );
                     }
 
-                    bin_file = fopen(second_stage_bin, "rb");
-
-                    disk_image_data = (puint8) realloc(
-                        disk_image_data,
-                        (disk_image_size + get_file_size(bin_file)) * sizeof(*disk_image_data)
-                    );
-
-                    fread(&disk_image_data[disk_image_pos], get_file_size(bin_file), sizeof(*disk_image_data), bin_file);
-                    fseek(bin_file, 0, SEEK_SET);
-
-                    disk_image_pos += get_file_size(bin_file);
-                    fclose(bin_file);
+                    read_into_disk_image(second_stage_bin);
 
                     delete sheading;
                     if(padding_val) delete padding_val;
@@ -425,17 +414,6 @@ namespace ConfigDiskImage
                 }
                 default: FAMP_ERROR("\nUnknown error occurred.\n")
             }
-        }
-
-        template<typename T>
-            requires std::is_same<T, adjust_binary *>::value
-                || std::is_same<T, config_image>::value
-                || std::is_same<T, config_image *>::value
-        void delete_instance(T instance)
-        {
-            if(instance)
-                delete instance;
-            instance = nullptr;
         }
 
         ~adjust_binary()

@@ -20,21 +20,12 @@ struct parser
         ytoken = ylexer->return_token();
     }
 
-    template<typename T>
-        requires std::is_same<T, struct parser>::value
-    void delete_instance(T *instance)
-    {
-        if(instance)
-            delete instance;
-        instance = nullptr;
-    }
-
     ~parser()
     {
         if(ylexer)
         {
-            ylexer->delete_instance<struct token> (ytoken);
-            ylexer->delete_instance<yaml_lexer> (ylexer);
+            delete ytoken;
+            delete ylexer;
         }
     }
 };
@@ -225,20 +216,10 @@ public:
         evaluate_yaml_data();
     }
 
-    template<typename T>
-        requires std::is_same<T, struct parser>::value
-            || std::is_same<T, yaml_parser>::value
-    void delete_instance(T *instance)
-    {
-        if(instance)
-            delete instance;
-        instance = nullptr;
-    }
-
     ~yaml_parser()
     {
-        if(yparser) yparser->delete_instance<struct parser> (yparser);
-        if(ydata) ydata->delete_instance<yaml_data> (ydata);
+        if(yparser) delete yparser;
+        if(ydata) delete ydata;
     }
 };
 
