@@ -121,7 +121,7 @@ namespace ConfigFiles
                         "\nError opening up `%s`.\n", fs_bin)
                     
                     fseek(fbin, 0, SEEK_END);
-                    size_t fbin_size = (ftell(fbin) / 512) + 0x05;
+                    size_t fbin_size = ftell(fbin);
                     fseek(fbin, 0, SEEK_SET);
                     fclose(fbin);
 
@@ -132,7 +132,8 @@ namespace ConfigFiles
                     sprintf((pint8) completed_format, (cpint8) format,
                         os_name, yod.type, yod.OS_version,
                         yod.FS_type, yod.in_production,
-                        fbin_size);
+                        (fbin_size / 512) + 0x05,
+                        (fbin_size / 512));
 
                     goto write;
                 }

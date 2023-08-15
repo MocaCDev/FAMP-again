@@ -57,7 +57,7 @@ namespace FAMP_FS
     /* PartitionType.
      * If the partition is a program, it will be set to `Code` otherwise it will be set to `Data`.
      * */
-    enum PartitionType
+    enum class PartitionType
     {
         Code,
         Data
@@ -67,7 +67,7 @@ namespace FAMP_FS
      * This just gives more explicit information over the partition and whether or not
      * it resides in physica or virtual memory space.
      * */
-    enum PartitionAddressType
+    enum class PartitionAddressType
     {
         Physcial,
         Virtual
