@@ -9,6 +9,7 @@ namespace ConfigFiles
     cpint8 protocol_makefile = (cpint8) initiate_path((pint8)"formats/", (pint8)"protocol_mf");
     cpint8 user_makefile = (cpint8) initiate_path((pint8)"formats/", (pint8)"user_mf");
     cpint8 old_mf = (cpint8) initiate_path((pint8)"formats/", (pint8)"old_mf");
+    cpint8 fs_bin = (cpint8) initiate_path((pint8)"../bin/", (pint8)"fs.bin");
 
     enum class FileToConfigure: uint8_t
     {
@@ -114,13 +115,24 @@ namespace ConfigFiles
 
                 if(file_being_configured == FileToConfigure::MBR)
                 {
+                    /* Get the filesystem binary size. */
+                    FILE *fbin = fopen(fs_bin, "rb");
+                    FAMP_ASSERT(fbin,
+                        "\nError opening up `%s`.\n", fs_bin)
+                    
+                    fseek(fbin, 0, SEEK_END);
+                    size_t fbin_size = (ftell(fbin) / 512) + 0x05;
+                    fseek(fbin, 0, SEEK_SET);
+                    fclose(fbin);
+
                     uint8 os_name[14];
                     memset(os_name, ' ', 14);
                     memcpy(os_name, yod.OS_name, strlen((cpint8) yod.OS_name));
 
                     sprintf((pint8) completed_format, (cpint8) format,
                         os_name, yod.type, yod.OS_version,
-                        yod.FS_type, yod.in_production);
+                        yod.FS_type, yod.in_production,
+                        fbin_size);
 
                     goto write;
                 }

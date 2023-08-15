@@ -17,13 +17,15 @@ namespace ConfigDiskImage
     cpint8 mbr_part_table_bin = (cpint8) initiate_path((pint8)"../bin/", (pint8)"mbr_part_table.bin");
     cpint8 fs_worker_bin = (cpint8) initiate_path((pint8) "../bin/", (pint8)"fs_worker.bin");
     cpint8 second_stage_bin = (cpint8) initiate_path((pint8)"../bin/", (pint8)"second_stage.bin");
+    cpint8 fs_bin = (cpint8) initiate_path((pint8)"../bin/", (pint8) "fs.bin");
 
     enum class program
     {
         MBR,
         MBR_PART_TABLE,
         FS_WORKER,
-        SECOND_STAGE
+        SECOND_STAGE,
+        FILESYSTEM
     };
 
     template<typename T>
@@ -412,6 +414,7 @@ namespace ConfigDiskImage
 
                     return;
                 }
+                case program::FILESYSTEM: read_into_disk_image(fs_bin);return;break;
                 default: FAMP_ERROR("\nUnknown error occurred.\n")
             }
         }

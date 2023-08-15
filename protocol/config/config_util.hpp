@@ -28,5 +28,10 @@ pint8 initiate_path(int8 data1[], int8 data2[])
 
 #include "config_files.hpp"
 #include "config_disk_image.hpp"
+#include "config_filesystem.hpp"
+
+using namespace ConfigFiles;
+using namespace ConfigDiskImage;
+using namespace ConfigFilesystem;
 
 #endif

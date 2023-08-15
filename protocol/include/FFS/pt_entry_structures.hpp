@@ -19,12 +19,15 @@ namespace PartitionTable_Entry_Structs
         uint8       entry_type;
         bool        auto_read_program;
         uint16      last_sector;
+        uint32      relative_sector;
+        uint8       sector_amnt;
+        uint32      padding;
 
         #ifndef OS_RELATED
         partition_entry() = default;
         ~partition_entry() = default;
         #endif
-    } __attribute__((packed));
+    } __attribute__((packed, aligned(1)));
 }
 
 #endif

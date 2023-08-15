@@ -2,11 +2,18 @@
 #define FAMP_PROTOCOL_FAMP_FS_H
 #include "../common.hpp"
 
-#define FAMP_FS_HEADER_SIG                  0x46414D504653  /* "FAMPFS" */
+constexpr uint8 FAMP_FS_HEADER_SIG[6]       = {'F', 'A', 'M', 'P', 'F', 'S'};//0x46414D504653  /* "FAMPFS" */
 #define FAMP_FS_REVISION                    0x0001
 #define FAMP_FS_PARTITION_METADATA_SIZE     0x0200
-#define FAMP_FS_BEGIN_SIG                   0x46534247      /* "FSBG" */
-#define FAMP_FS_PARTITION_BEGIN_SIG         0x46424547      /* "FBEG" */
+uint32 FAMP_FS_BEGIN_SIG                    = 0x46534247;   /* "FSBG" */
+uint32 FAMP_FS_PARTITION_BEGIN_SIG          = 0x50424547;   /* "PBEG" */
+
+/* Initial address of the FS. */
+#define FAMP_FS_INITIAL_ADDRESS             0x8200
+#define FAMP_FS_KERNEL_VIRTUAL_ADDRESS      (uint32) 0x80000000
+
+/* Kernel partition name. */
+constexpr uint8 FAMP_FS_KERNEL_PART_NAME[6] = {'K', 'E', 'R', 'N', 'E', 'L'};
 
 namespace FAMP_FS
 {
@@ -24,7 +31,7 @@ namespace FAMP_FS
         FAMP_FS_HEADER() = default;
         ~FAMP_FS_HEADER() = default;
         #endif
-    };
+    } __attribute__((packed));
 
     /* Partition access.
      * Who can access the program/data residing in the given partition on the FileSystem?
@@ -35,7 +42,6 @@ namespace FAMP_FS
         KernelOnly      = 0xD1,         /* Only the kernel (and Protocol) can access, and manipulate (R/W), the partition. */
         UserOnly        = 0xD2,         /* Only the user (and Protocol) can access, and manipulate (R/W), the partition. */
         Kernel_User     = 0xD3,         /* The kernel and the user (and Protocol) can access, and manipulate (R/W), the partition. */
-        Protocol_Kernel = 0xD4          /* Only the protocol and kernel can access, and manipulate (R/W), the partition. */
     };
 
     /* Action taking place on a partition.
@@ -55,6 +61,16 @@ namespace FAMP_FS
     {
         Code,
         Data
+    };
+
+    /* Partition address type.
+     * This just gives more explicit information over the partition and whether or not
+     * it resides in physica or virtual memory space.
+     * */
+    enum PartitionAddressType
+    {
+        Physcial,
+        Virtual
     };
 
     /* What identity messed with the partition.
@@ -83,6 +99,7 @@ namespace FAMP_FS
         uint8       PartitionAcc;           /* PartitionAcc = PartitionAccess. */
         uint8       PartitionAct;           /* PartitionAct = PartitionAction. */
         uint32      PartitionAddress;       /* Where does the partition (file) get loaded into memory? */
+        uint8       PartitionAddressT;      /* Type of partition address (physical or virtual)? */
         uint8       PartitionT;             /* PartitionT = PartitionType. */
 
         /* Size information. */
@@ -90,7 +107,7 @@ namespace FAMP_FS
         uint32      PartitionByteSize;      /* How many bytes does the partition (file) take up? (PartitionSectorSize * 512) */
         uint16      PartitionActionCount;   /* How many actions have occured for the partition (file)? */
         uint8       PartitionActionID;      /* What identity last manipulated the partition (file)? */
-        uint32      PartitionDataOffset;    /* Where do the partitions that make up the FileSystem begin? */
+        uint32      PartitionDataOffset;    /* Where does the code/data of the partition begin (needed due to some partitions including additional data prior to the data/code beginning)? */
 
         /* Relocation data (not required; gets filled out upon the partition (file) needing to be relocated). */
         bool        NeedsRelocated;         /* Does the partition (file) need to be relocated? */
@@ -104,9 +121,9 @@ namespace FAMP_FS
         uint32      OriginalAddress;
         uint8       RelocateAcc;            /* RelocateAcc = RelocateAction; if `WillReturn` is true, this will be kept track of to see if it changed to `RelocateBack`, else it will be set to `RelocateAndStay`. */
 
-        uint8       Padding[0x176];
+        uint8       Padding[0x175];
         uint32      PartitionBeginSig;      /* "PBEG". */
-    };
+    } __attribute__((packed));
 }
 
 #endif
