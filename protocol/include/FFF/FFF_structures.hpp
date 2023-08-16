@@ -1,6 +1,5 @@
 #ifndef FAMP_FILE_FORMAT_STRUCTURES_H
 #define FAMP_FILE_FORMAT_STRUCTURES_H
-#include "../common.hpp"
 
 /* The disk image header is at an offset of 5 in the binary file.
  * Reason being, there is a jmp instruction at the beginning of the disk
@@ -36,7 +35,7 @@ uint32 FAMP_SUBHEADER_SIGNATURE           = (uint32) 0x46534844;       /* FSHD *
 #define FAMP_MEM_STAMP_PTBLE_P        0x10F0          /* PTBLE_P - Partition Table Program ID */
 #define FAMP_MEM_STAMP_SECOND_STAGE   0x20F0
 #define FAMP_MEM_STAMP_FS_WORKER      0x30F0
-#define FAMP_MEM_STAMP_FEND_SIG       0x46454E44;
+#define FAMP_MEM_STAMP_FEND_SIG       0x46454E44
 
 namespace FFF_Structures
 {
@@ -74,11 +73,13 @@ namespace FFF_Structures
         uint16          HeaderEnd;
         uint16          padding3;
 
-        #ifndef OS_RELATED
         FAMP_PROTOCOL_DISK_IMAGE_HEADING() = default;
         ~FAMP_PROTOCOL_DISK_IMAGE_HEADING() = default;
-        #endif
+    #ifdef OS_RELATED
+    } __attribute__((packed));
+    #else
     };
+    #endif
 
     struct FAMP_PROTOCOL_SUBHEADING
     {
@@ -90,10 +91,8 @@ namespace FFF_Structures
 
         bool            IsAsmProgram;
 
-        #ifndef OS_RELATED
         FAMP_PROTOCOL_SUBHEADING() = default;
         ~FAMP_PROTOCOL_SUBHEADING() = default;
-        #endif
     } __attribute__((packed));
 
     /* Data over the section that is occurring.
@@ -108,17 +107,15 @@ namespace FFF_Structures
 
         FAMP_SECTION_DATA() = default;
         ~FAMP_SECTION_DATA() = default;
-    };
+    } __attribute__((packed));
 
-    /* The configuration does not need this, so only have it when the OS is running. */
-    //#ifdef OS_RELATED
     struct FAMP_PROTOCOL_MEMORY_STAMP
     {
         uint16          MemID;
         uint8           MemIDSig[4] = {'F', 'E', 'N', 'D'};
         uint16          padding = 0x0000;
     } __attribute__((packed));
-    //#endif
+    
 }
 
 #endif

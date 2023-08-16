@@ -6,8 +6,8 @@ jmp 0x0:start
 FAMP_spec_MBR_header:
     .sig                        db 'FAMP', 0x0, 0x0
     .rev                        dw 0x1000, 0x0
-    .usable_entries             db 0x01,
-    .entry_locs                 dw 0x1BE, 0x0, 0x0, 0x0
+    .usable_entries             db 0x02,
+    .entry_locs                 dw 0x1BE, 0x1CE, 0x0, 0x0
 	.os_name					db '%s', 0x0
 	.os_type					db 0x%X
 	.os_version					db '%s', 0x0
@@ -68,6 +68,8 @@ start:
 	xor ax, ax
 	mov es, ax
 	mov ds, ax
+	mov fs, ax
+	mov gs, ax
 
 	cli
 	mov bp, 0x7C00
@@ -84,6 +86,19 @@ start:
 	mov al, 0x01
 	mov ch, 0x00
 	mov cl, 0x02
+	mov dh, 0x00
+	mov dl, 0x80
+	int 0x13
+	jc failed
+
+	xor ax, ax
+	mov es, ax
+	mov bx, 0x0700
+
+	mov ah, 0x02
+	mov al, 0x01
+	mov ch, 0x00
+	mov cl, 0x03
 	mov dh, 0x00
 	mov dl, 0x80
 	int 0x13
@@ -114,10 +129,10 @@ FAMP_spec_MBR_ptbl_entries:
     .id_name    db 'FMPT', 0x0, 0x0
 
 ; Second stage bootloader(0x0E = second-stage bootloader)
-CreateEntry 1, 0x80, 0x03, 0x0E, 1, 0x5, 0x2
+CreateEntry 1, 0x80, 0x04, 0x0E, 1, 0x6, 0x2
 
 ; FS(0x0C = FileSystem)
-CreateEntry	2, 0x00, 0x05, 0x0C, 1, 0x%X, 0x%X
+CreateEntry	2, 0x00, 0x06, 0x0C, 1, 0x%X, 0x%X
 
 ; Unused
 CreateEntry	3, 0x00, 0x00, 0x01, 0, 0x00, 0x00

@@ -3,10 +3,10 @@
 #include <FFF/FFF_structures.hpp>
 
 /* Needed to check the entries when checking the MBR binary. */
-#include <FFS/pt_entry_structures.hpp>
+#include <bootloader/bootloader_structures.hpp>
 
 using namespace FFF_Structures;
-using namespace PartitionTable_Entry_Structs;
+using namespace BootloaderStructs;
 
 namespace ConfigDiskImage
 {
@@ -27,35 +27,6 @@ namespace ConfigDiskImage
         SECOND_STAGE,
         FILESYSTEM
     };
-
-    template<typename T>
-        requires (std::is_same<T, uint16_t>::value
-            || std::is_same<T, uint32_t>::value)
-            && (!std::is_same<T, uint8_t>::value)
-    T revert_value(T &value)
-    {
-        T old_value = value;
-        value ^= value;
-
-        switch(sizeof(T))
-        {
-            case 2: {
-                value |= (value << 0) | ((old_value >> 0) & 0xFF);
-                value = (value << 8) | ((old_value >> 8) & 0xFF);
-                break;
-            }
-            case 4: {
-                value |= (value << 0) | ((old_value >> 0) & 0xFF);
-                value = (value << 8) | ((old_value >> 8) & 0xFF);
-                value = (value << 8) | ((old_value >> 16) & 0xFF);
-                value = (value << 8) | ((old_value >> 24) & 0xFF);
-                break;
-            }
-            default: break;
-        }
-
-        return (T) value;
-    }
 
     class config_image
     {
@@ -79,10 +50,7 @@ namespace ConfigDiskImage
         ~config_image()
         {
             if(disk_image_data) delete disk_image_data;
-            disk_image_data = nullptr;
-
             if(dimg_heading) delete dimg_heading;
-            dimg_heading = nullptr;
         }
     };
 
@@ -90,23 +58,6 @@ namespace ConfigDiskImage
     {
     private:
         /* Used to check MBR binary. */
-        struct MBR_bin_outline
-        {
-            uint16          MBR_start_ID;
-            uint8           MBR_start_ID_name[4];
-            uint16          padding;
-
-            /* There is 383 bytes (0x17F) of entry-code that is allowed between
-             * the section data and the next piece of section data (MBR partition table entries).
-             * */
-            uint8           entry_code[0x17A];
-
-            uint16          MBR_ptbl_entry_ID;
-            uint8           MBR_ptbl_entry_ID_name[4];
-            uint16          padding2;
-
-            //uint8           rest_of_MBR[42];
-        } __attribute__((packed));
 
         program binary_program;
         struct partition_entry *pentry = nullptr;
@@ -249,7 +200,7 @@ namespace ConfigDiskImage
                      * results in 5 bytes. Skip the 5 bytes.
                      * At the 6th byte, the disk image header will begin.
                      * */
-                    fseek(bin_file, 5, SEEK_SET);
+                    fseek(bin_file, FAMP_DISK_IMAGE_HDR_OFFSET, SEEK_SET);
                     fread(dimg_heading, 1, sizeof(*dimg_heading), bin_file);
 
                     /* Read in the rest of the MBR binary and check the sections. */
@@ -270,26 +221,69 @@ namespace ConfigDiskImage
 
                         /* check the entries. */
                         pentry = new struct partition_entry;
+                        struct partition_entry prev_entry;
                         
                         {
                             /* Entry 1 - Second Stage Bootloader. */
                             fread(pentry, 1, sizeof(*pentry), bin_file);
+                            prev_entry = *pentry;
 
                             FAMP_ASSERT(pentry->bootable_entry == ENTRY_IS_BOOTABLE,
                                 "\nError with first entry in the MBR partition table entry:\n\tThe entry was marked not bootable.\n")
-                            FAMP_ASSERT(pentry->starting_sector == 0x03,
+                            FAMP_ASSERT(pentry->starting_sector == 0x04,
                                 "\nError with first entry in the MBR partition table entry:\n\tThe second stage gets read in from the third to fifth sector.\n\tThis data was not found in the entry description.\n")
                             FAMP_ASSERT(pentry->entry_type == ENTRY_TYPE_SS,
                                 "\nError with first entry in the MBR partition table entry:\n\tThe second stage entry type that gets referenced by the partition entry was not found to be 0x0E.\n")
                             FAMP_ASSERT(pentry->auto_read_program == true,
                                 "\nError with first entry in the MBR partition table entry:\n\tThe second stage program is auto read by the MBR partition table C++ program.\n\tIt was found to be set to false in the entry.\n")
-                            FAMP_ASSERT(pentry->last_sector == 0x05,
+                            FAMP_ASSERT(pentry->last_sector == 0x06,
                                 "\nError with first entry in the MBR partition table entry:\n\tThe second stage bootloader consists of two sectors (from the third to the fifth).\n\tThis data was not found in the entry.")
                         }
 
                         {
-                            /* TODO: Read the partition table entry that describes information about the filesystem. */
+                            fread(pentry, 1, sizeof(*pentry), bin_file);
+
+                            FILE *fsbin = fopen(fs_bin, "rb");
+                            FAMP_ASSERT(fsbin,
+                                "\nError opening up the FileSystem (FS) binary whilst checking MBR partition table entries.\n")
+                            
+                            fseek(fsbin, 0, SEEK_END);
+                            size_t fs = ftell(fsbin) / 512;
+                            fseek(fsbin, 0, SEEK_SET);
+                            fclose(fsbin);
+
+                            FAMP_ASSERT(pentry->bootable_entry != ENTRY_IS_BOOTABLE,
+                                "\nError with the second entry in the MBR partition table:\n\tThe second entry describes the FileSystem (FS) and should not be bootable.\n")
+                            FAMP_ASSERT(pentry->starting_sector == prev_entry.last_sector,
+                                "\nError with the second entry in the MBR partition table:\n\tThe starting sector of the FileSystem (FS) is not aligned with the last sector of the first MBR partition table entry.\n")
+                            FAMP_ASSERT(pentry->sector_amnt == fs,
+                                "\nError with the second entry in the MBR partition table entry:\n\tThe sector size does not match the sector size of the binary file `%s`.\n",
+                                fs_bin)
+                            FAMP_ASSERT(pentry->auto_read_program == true,
+                                "\nError with the second entry in the MBR partition table entry:\n\tThe FileSystem (FS) is auto read by the MBR partition table C++ program.\n")
+                            FAMP_ASSERT(pentry->last_sector == prev_entry.last_sector + fs,
+                                "\nError with the second entry in the MBR partition table entry:\n\tThe last sector did not match %X (%d) + the previous sector number, being %X (%d) which equals %X (%d).\n",
+                                pentry->starting_sector, pentry->starting_sector,
+                                prev_entry.last_sector, pentry->last_sector,
+                                prev_entry.last_sector + (uint32)fs, prev_entry.last_sector + (uint32)fs)
+                            FAMP_ASSERT(pentry->entry_type == ENTRY_TYPE_FILESYSTEM,
+                                "\nError with the second entry in the MBR partition table entry:\n\tThe entry type did was not found to represent the FileSystem (FS), of which the second entry of the MBR partition table\n\tshould represent.\n")
                         }
+
+                        /* The next two entries should be unused. */
+                        {
+                            uint8 i = 0;
+
+                            reloop:
+                            if(i == 2) goto outside;
+                            fread(pentry, 1, sizeof(*pentry), bin_file);
+                            
+                            FAMP_ASSERT(pentry->entry_type == ENTRY_TYPE_UNUSED,
+                                "\nError:\n\tOne of the last two MBR partition table entries was not found to be unused, of which the last two entries should be.\n")
+                            i++;
+                            goto reloop;
+                        }
+                        outside:
 
                         delete pentry;
 
@@ -344,6 +338,7 @@ namespace ConfigDiskImage
                         padding = (512 - file_size) - sizeof(mem_stamp) - FAMP_SUBHEADING_SIZE;
 
                     sheading = new struct FAMP_PROTOCOL_SUBHEADING;
+
                     init_subheading(
                         *sheading,
                         (file_size + padding + FAMP_SUBHEADING_SIZE + 8),
@@ -422,7 +417,13 @@ namespace ConfigDiskImage
         ~adjust_binary()
         {
             if(disk_image_data) delete disk_image_data;
-            disk_image_data = nullptr;
+            
+            free((pint8) disk_image_path);
+            free((pint8) mbr_binary);
+            free((pint8) mbr_part_table_bin);
+            free((pint8) fs_worker_bin);
+            free((pint8) second_stage_bin);
+            free((pint8) fs_bin);
         }
     };
 }

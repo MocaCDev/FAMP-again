@@ -85,8 +85,48 @@ FAMP_LOG(msg, ##__VA_ARGS__)                \
 exit(EXIT_FAILURE);
 #endif
 
+template<typename T>
+#ifndef OS_RELATED
+    requires (std::is_same<T, uint16>::value
+        || std::is_same<T, uint32>::value)
+        && (!std::is_same<T, uint8>::value)
+#endif
+#ifndef OS_RELATED
+T revert_value(T &value)
+#else
+T revert_value(T value)
+#endif
+{
+    #ifdef OS_RELATED
+    if(sizeof(T) == 1) return (T) value & 0xFF;
+    #endif
+
+    T old_value = value;
+    value ^= value;
+
+    switch(sizeof(T))
+    {
+        case 2: {
+            value |= (value << 0) | ((old_value >> 0) & 0xFF);
+            value = (value << 8) | ((old_value >> 8) & 0xFF);
+            break;
+        }
+        case 4: {
+            value |= (value << 0) | ((old_value >> 0) & 0xFF);
+            value = (value << 8) | ((old_value >> 8) & 0xFF);
+            value = (value << 8) | ((old_value >> 16) & 0xFF);
+            value = (value << 8) | ((old_value >> 24) & 0xFF);
+            break;
+        }
+        default: break;
+    }
+
+    return (T) value;
+}
+
 #ifdef OS_RELATED
 #define __START __attribute__((section("__start")))
+asm(".code16gcc");
 #endif
 
 #endif

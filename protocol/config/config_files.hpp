@@ -108,7 +108,6 @@ namespace ConfigFiles
                         yod.kernel_bin_filename,
                         yod.bin_folder, yod.bin_folder
                     );
-                    printf("%lX, %lX\n", strlen((cpint8) format), strlen((cpint8) completed_format));
                     
                     goto write;
                 }
@@ -132,7 +131,7 @@ namespace ConfigFiles
                     sprintf((pint8) completed_format, (cpint8) format,
                         os_name, yod.type, yod.OS_version,
                         yod.FS_type, yod.in_production,
-                        (fbin_size / 512) + 0x05,
+                        (fbin_size / 512) + 0x06,
                         (fbin_size / 512));
 
                     goto write;

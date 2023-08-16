@@ -1,9 +1,13 @@
 ENTRY(main)
 SECTIONS {
     /* Program starts at 0x0700. */
-    . = 0x80000000;
+    . = 0xA000;
 
-    .text : AT(0x80000000)
+    /* MBR related addresses. */
+    disk_image_heading = 0x0900;
+    mbr_entry_code = 0x0A84;
+
+    .text : AT(0xA000)
     {
         *(__start*);
         *(.text*);

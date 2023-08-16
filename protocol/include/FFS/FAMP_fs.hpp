@@ -27,10 +27,8 @@ namespace FAMP_FS
         uint16      padding[0xF9];
         uint32      FampFS_BeginSig;    /* "FSBG" */
 
-        #ifndef OS_RELATED
         FAMP_FS_HEADER() = default;
         ~FAMP_FS_HEADER() = default;
-        #endif
     } __attribute__((packed));
 
     /* Partition access.

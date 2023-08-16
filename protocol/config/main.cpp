@@ -59,7 +59,7 @@ int main(int args, char *argv[])
 
         abin.switch_binary_program(program::SECOND_STAGE);
         abin.adjust();
-        
+
         abin.switch_binary_program(program::FILESYSTEM);
         abin.adjust();
 

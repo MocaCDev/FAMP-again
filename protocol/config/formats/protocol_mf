@@ -40,7 +40,8 @@ clean_mbr_part_table:
 	rm -rf bin/mbr_part_table.out
 
 bin/mbr_part_table.bin: clean_mbr_part_table
-	g++ $(FLAGS) -I include/ -o bin/mbr_part_table.o boot/mbr_part_table.cpp
+	nasm boot/test.s -f elf32 -o bin/test.o
+	g++ $(FLAGS) -I include/ boot/mbr_part_table.cpp -o bin/mbr_part_table.o
 	ld -m elf_i386 -Tlinker/mbr_part_table.ld -nostdlib --nmagic -o bin/mbr_part_table.out bin/mbr_part_table.o
 	objcopy -O binary bin/mbr_part_table.out bin/mbr_part_table.bin
 
