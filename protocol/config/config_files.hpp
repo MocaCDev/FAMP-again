@@ -115,18 +115,33 @@ namespace ConfigFiles
 
                 if(file_being_configured == FileToConfigure::MBR)
                 {
+                    FILE *fbin = nullptr;
+
+                    const auto get_file_size = [&fbin] ()
+                    {
+                        FAMP_ASSERT(fbin,
+                            "\nError with the file.\n")
+                        
+                        fseek(fbin, 0, SEEK_END);
+                        size_t file_size = ftell(fbin);
+                        fseek(fbin, 0, SEEK_SET);
+
+                        return (size_t) file_size;
+                    };
+
+                    const auto open_file = [&fbin] (cpint8 filename, cpint8 mode)
+                    {
+                        fbin = fopen(filename, mode);
+                        FAMP_ASSERT(fbin,
+                            "\nError opening the binary file `%s`.\n",
+                            filename)
+                    };
+
                     /* Formatting FS binary to be multiple of 512 bytes. */
                     {
-                        FILE *fs_binary;
-
-                        fs_binary = fopen(fs_bin, "rb");
-                        FAMP_ASSERT(fs_binary,
-                            "\nError opening up the fs binary file `%s`.\n",
-                            fs_bin)
+                        open_file(fs_bin, (cpint8) "rb");
                         
-                        fseek(fs_binary, 0, SEEK_END);
-                        size_t fs_bin_size = ftell(fs_binary);
-                        fseek(fs_binary, 0, SEEK_SET);
+                        size_t fs_bin_size = get_file_size();
 
                         size_t bytes_needed = fs_bin_size;
                         while(bytes_needed % 512 != 0)
@@ -135,28 +150,23 @@ namespace ConfigFiles
                         uint8 padding[bytes_needed - fs_bin_size];
                         memset(padding, 0, bytes_needed - fs_bin_size);
                         puint8 fs_data = new uint8[fs_bin_size];
-                        fread(fs_data, fs_bin_size, sizeof(*fs_data), fs_binary);
+                        fread(fs_data, fs_bin_size, sizeof(*fs_data), fbin);
 
-                        fclose(fs_binary);
+                        fclose(fbin);
 
                         {
-                            fs_binary = fopen(fs_bin, "wb");
-                            fwrite(fs_data, fs_bin_size, sizeof(*fs_data), fs_binary);
-                            fwrite(&padding, bytes_needed - fs_bin_size, sizeof(uint8), fs_binary);
-                            fclose(fs_binary);
+                            open_file(fs_bin, (cpint8) "wb");
+                            fwrite(fs_data, fs_bin_size, sizeof(*fs_data), fbin);
+                            fwrite(&padding, bytes_needed - fs_bin_size, sizeof(uint8), fbin);
+                            fclose(fbin);
                         }
 
                         delete fs_data;
                     }
 
                     /* Get the filesystem binary size. */
-                    FILE *fbin = fopen(fs_bin, "rb");
-                    FAMP_ASSERT(fbin,
-                        "\nError opening up `%s`.\n", fs_bin)
-                    
-                    fseek(fbin, 0, SEEK_END);
-                    size_t fbin_size = ftell(fbin);
-                    fseek(fbin, 0, SEEK_SET);
+                    open_file(fs_bin, "rb");
+                    size_t fbin_size = get_file_size();
                     fclose(fbin);
 
                     uint8 os_name[14];

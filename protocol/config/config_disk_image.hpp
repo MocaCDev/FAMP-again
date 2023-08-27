@@ -286,7 +286,7 @@ namespace ConfigDiskImage
                             i++;
                             goto reloop;
                         }
-                        
+
                         outside:
                         delete pentry;
 
@@ -302,28 +302,6 @@ namespace ConfigDiskImage
                     fread(disk_image_data, 512, sizeof(*disk_image_data), bin_file);
                     fclose(bin_file);
 
-                    return;
-                }
-                case program::KERNEL: {
-                    size_t padding = init_adjustment((cpint8)abs_kernel_bin_path, 0, false);
-                    size_t file_size = get_file_data();
-
-                    fclose(bin_file);
-
-                    {
-                        bin_file = fopen((cpint8)abs_kernel_bin_path, "wb");
-                        write_new_binary(
-                            false,
-                            *sheading,
-                            mem_stamp,
-                            file_size,
-                            padding
-                        );
-                        fclose(bin_file);
-                    }
-
-                    delete padding_val;
-                    free(bin_file_data);
                     return;
                 }
                 case program::MBR_PART_TABLE: {
