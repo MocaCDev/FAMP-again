@@ -54,7 +54,6 @@ void __START main()
 
     if(filesystem[0] == 0x46)
     __asm__("mov ah, 0x0e\nmov al, 'a'\nint 0x10");
-    //__asm__("jmp 0x00:0x7E0D");
 
     while(1);
 }

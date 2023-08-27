@@ -17,6 +17,9 @@ void __attribute__((section("__start"))) main()
     /* MBR partition table entries. */
     *pentry = *(struct partition_entry *) (0x7C00 + MBR_partition_table_entries_offset);//MBR_ptr_addr;
     read_in_memory(SECOND_STAGE_ADDRESS/16, pentry->starting_sector, pentry->sector_amnt);
+    
+    /* FS worker program. */
+    read_in_memory(0x0B00, pentry->starting_sector + pentry->sector_amnt, 1);
 
     /* Get the FS partition entry, just for possible future reference. */
     *pentry = *(struct partition_entry *) (0x7C00 + second_MBR_partition_table_entry);

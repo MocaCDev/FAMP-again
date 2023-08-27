@@ -6,7 +6,7 @@ static puint8 FS_dest_addr;
 static puint8 fs = (puint8) 0xF000;
 
 void __START main()
-{ 
+{
     /* Move*/
     /*puint8 FS_dest_addr = (puint8) FAMP_FS_INITIAL_ADDRESS;
     FS_data = (puint8) FAMP_FS_INITIAL_ADDRESS;
