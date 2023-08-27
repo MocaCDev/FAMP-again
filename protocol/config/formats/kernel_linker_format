@@ -8,7 +8,7 @@ SECTIONS {
     mbr_entry_code = 0x0A84;
 
     filesystem_phs_addr = 0x8200;
-    filesystem = 0x80000600;
+    filesystem = 0x%X;
 
     .text : AT(0xA000)
     {

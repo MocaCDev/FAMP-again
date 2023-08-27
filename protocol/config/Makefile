@@ -4,6 +4,8 @@
 .PHONY: mbr
 .PHONY: filesystem
 .PHONY: disk_image
+.PHONY: config_kernel_size
+.PHONY: ffs
 
 FLAGS = -fsanitize=leak -std=c++20 -Wall
 
@@ -27,3 +29,9 @@ filesystem:
 
 disk_image:
 	../bin/config.o dimg
+
+config_kernel_size:
+	../bin/config.o ksize
+
+ffs:
+	../bin/config.o ffs

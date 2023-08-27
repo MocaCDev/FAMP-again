@@ -77,13 +77,12 @@ start:
 	mov ss, ax
 	sti
 
-	; Read in program that works with the MBR partition table(located at 0x0500)
 	xor ax, ax
 	mov es, ax
-	mov bx, 0x0500
+	mov bx, 0xF000
 
 	mov ah, 0x02
-	mov al, 0x01
+	mov al, 0x%X
 	mov ch, 0x00
 	mov cl, 0x02
 	mov dh, 0x00
@@ -91,18 +90,32 @@ start:
 	int 0x13
 	jc failed
 
+	; Read in program that works with the MBR partition table(located at 0x0500)
 	xor ax, ax
 	mov es, ax
-	mov bx, 0x0700
+	mov bx, 0x0500
 
 	mov ah, 0x02
-	mov al, 0x01
+	mov al, 0x03
 	mov ch, 0x00
-	mov cl, 0x03
+	mov cl, 0x%X
 	mov dh, 0x00
 	mov dl, 0x80
 	int 0x13
 	jc failed
+
+	;xor ax, ax
+	;mov es, ax
+	;mov bx, 0x0700
+
+	;mov ah, 0x02
+	;mov al, 0x01
+	;mov ch, 0x00
+	;mov cl, 0x03 ; the `fs_worker` program gets loaded right after the second stage bootloader
+	;mov dh, 0x00
+	;mov dl, 0x80
+	;int 0x13
+	;jc failed
 
 	; Jump to program that works with the MBR partition table
 	jmp 0x0500
@@ -129,10 +142,10 @@ FAMP_spec_MBR_ptbl_entries:
     .id_name    db 'FMPT', 0x0, 0x0
 
 ; Second stage bootloader(0x0E = second-stage bootloader)
-CreateEntry 1, 0x80, 0x04, 0x0E, 1, 0x6, 0x2
+CreateEntry 1, 0x80, 0x0%X, 0x0E, 1, 0x%X, 0x2
 
 ; FS(0x0C = FileSystem)
-CreateEntry	2, 0x00, 0x06, 0x0C, 1, 0x%X, 0x%X
+CreateEntry	2, 0x00, 0x0%X, 0x0C, 1, 0x%X, 0x%X
 
 ; Unused
 CreateEntry	3, 0x00, 0x00, 0x01, 0, 0x00, 0x00

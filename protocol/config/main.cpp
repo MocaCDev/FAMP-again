@@ -37,30 +37,21 @@ int main(int args, char *argv[])
 
         goto end;
     }
-    if(strcmp((pint8) argv[1], "fs") == 0)
-    {
-        config_famp_fs cfs;
-
-        cfs.init_filesystem();
-        cfs.config_kernel_partition();
-
-        goto end;
-    }
     if(strcmp((pint8) argv[1], "dimg") == 0)
     {   
         adjust_binary abin(program::MBR);
         abin.adjust();
 
-        abin.switch_binary_program(program::MBR_PART_TABLE);
+        abin.switch_binary_program(program::FILESYSTEM);
         abin.adjust();
 
-        abin.switch_binary_program(program::FS_WORKER);
+        abin.switch_binary_program(program::MBR_PART_TABLE);
         abin.adjust();
 
         abin.switch_binary_program(program::SECOND_STAGE);
         abin.adjust();
 
-        abin.switch_binary_program(program::FILESYSTEM);
+        abin.switch_binary_program(program::FS_WORKER);
         abin.adjust();
 
         config_image *cimg = dynamic_cast<config_image *> (&abin);

@@ -10,7 +10,7 @@ namespace ConfigFiles
     cpint8 user_makefile = (cpint8) initiate_path((pint8)"formats/", (pint8)"user_mf");
     cpint8 old_mf = (cpint8) initiate_path((pint8)"formats/", (pint8)"old_mf");
     cpint8 fs_bin = (cpint8) initiate_path((pint8)"../bin/", (pint8)"fs.bin");
-
+    
     enum class FileToConfigure: uint8_t
     {
         UserMakefile,
@@ -102,10 +102,11 @@ namespace ConfigFiles
                 if(file_being_configured == FileToConfigure::ProtocolMakefile)
                 {
                     sprintf((pint8) completed_format, (cpint8) format,
-                        yod.kernel_bin_filename, yod.kernel_bin_filename, yod.kernel_o_filename, yod.kernel_bin_filename,
+                        yod.kernel_bin_filename, yod.kernel_bin_filename, 
+                        yod.kernel_bin_filename, yod.kernel_o_filename,
                         yod.kernel_bin_filename,
                         yod.kernel_o_filename, yod.kernel_source_filename,
-                        yod.kernel_bin_filename,
+                        yod.kernel_o_filename, yod.kernel_bin_filename,
                         yod.bin_folder, yod.bin_folder
                     );
                     
@@ -114,6 +115,40 @@ namespace ConfigFiles
 
                 if(file_being_configured == FileToConfigure::MBR)
                 {
+                    /* Formatting FS binary to be multiple of 512 bytes. */
+                    {
+                        FILE *fs_binary;
+
+                        fs_binary = fopen(fs_bin, "rb");
+                        FAMP_ASSERT(fs_binary,
+                            "\nError opening up the fs binary file `%s`.\n",
+                            fs_bin)
+                        
+                        fseek(fs_binary, 0, SEEK_END);
+                        size_t fs_bin_size = ftell(fs_binary);
+                        fseek(fs_binary, 0, SEEK_SET);
+
+                        size_t bytes_needed = fs_bin_size;
+                        while(bytes_needed % 512 != 0)
+                            bytes_needed++;
+                        
+                        uint8 padding[bytes_needed - fs_bin_size];
+                        memset(padding, 0, bytes_needed - fs_bin_size);
+                        puint8 fs_data = new uint8[fs_bin_size];
+                        fread(fs_data, fs_bin_size, sizeof(*fs_data), fs_binary);
+
+                        fclose(fs_binary);
+
+                        {
+                            fs_binary = fopen(fs_bin, "wb");
+                            fwrite(fs_data, fs_bin_size, sizeof(*fs_data), fs_binary);
+                            fwrite(&padding, bytes_needed - fs_bin_size, sizeof(uint8), fs_binary);
+                            fclose(fs_binary);
+                        }
+
+                        delete fs_data;
+                    }
+
                     /* Get the filesystem binary size. */
                     FILE *fbin = fopen(fs_bin, "rb");
                     FAMP_ASSERT(fbin,
@@ -131,7 +166,12 @@ namespace ConfigFiles
                     sprintf((pint8) completed_format, (cpint8) format,
                         os_name, yod.type, yod.OS_version,
                         yod.FS_type, yod.in_production,
-                        (fbin_size / 512) + 0x06,
+                        fbin_size / 512,
+                        0x2 + (fbin_size / 512),
+                        0x2 + (fbin_size / 512) + 0x3,
+                        (0x5 + (fbin_size / 512)) + 0x2,
+                        (0x5 + (fbin_size / 512)) + 0x2,
+                        (0x5 + (fbin_size / 512)) + 0x2 + (fbin_size / 512),
                         (fbin_size / 512));
 
                     goto write;

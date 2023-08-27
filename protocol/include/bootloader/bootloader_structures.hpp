@@ -1,11 +1,15 @@
 #ifndef FAMP_PROTOCOL_BOOTLOADER_STRUCTURES_H
 #define FAMP_PROTOCOL_BOOTLOADER_STRUCTURES_H
 
+#include "../FFF/FFF_structures.hpp"
+using namespace FFF_Structures;
+
 /* The disk image header is at an offset of 5 in the MBR binary
  * due to a jmp instruction.
  * */
 #define FAMP_DISK_IMAGE_HDR_OFFSET  0x05
 #define FAMP_DISK_IMAGE_HDR_ADDR    (0x7C00 + FAMP_DISK_IMAGE_HDR_OFFSET)
+#define FAMP_MBR_ADDR               0x7C00
 
 #define ENTRY_IS_BOOTABLE           0x80
 #define ENTRY_IS_NOT_BOOTABLE       0x00
@@ -39,6 +43,14 @@ namespace BootloaderStructs
         //uint8           rest_of_MBR[42];
     } __attribute__((packed));
 
+    enum class PartitionNumber
+    {
+        FirstPart = 0x0,
+        SecondPart,
+        ThirdPart,
+        FourthPart
+    };
+
     struct partition_entry
     {
         uint8       bootable_entry;
@@ -51,6 +63,7 @@ namespace BootloaderStructs
         uint32      padding;
 
         partition_entry() = default;
+
         ~partition_entry() = default;
     } __attribute__((packed));
 }

@@ -14,13 +14,15 @@
 
 FLAGS = -std=c++20 -masm=intel -O1 -Wno-error -c -nostdinc -nostdlib -fno-builtin -fno-stack-protector -ffreestanding -m32
 
-build: bin/mbr_part_table.bin bin/fs_worker.bin bin/second_stage.bin ../%s
+build: bin/mbr_part_table.bin bin/fs_worker.bin ../%s bin/second_stage.bin
+	cd config && make ffs
+	nasm boot/filesystem.s -f bin -o bin/fs.bin
 	cd config && make mbr
 	nasm boot/mbr.s -f bin -o bin/mbr.bin
 	cd config && make disk_image
 
 run:
-	qemu-system-i386 bin/OS.img
+	qemu-system-i386 -m 4G -drive format=raw,file=bin/OS.img
 
 clean_kernel_bin:
 	rm -rf ../%s
@@ -29,10 +31,9 @@ clean_kernel_bin:
 
 # TODO: Add `bin/kernel.bin`
 ../%s: clean_kernel_bin
-	g++ $(FLAGS) -I include/ -o ../%s ../%s
-	ld -m elf_i386 -Tlinker/mbr_part_table.ld -nostdlib --nmagic -o bin/kernel.out bin/mbr_part_table.o
+	g++ $(FLAGS) -I include/protocol -o ../%s ../%s
+	ld -m elf_i386 -Tlinker/kernel.ld -nostdlib --nmagic -o bin/kernel.out ../%s bin/protocol_util.o
 	objcopy -O binary bin/kernel.out ../%s
-	cd config && make filesystem
 
 clean_mbr_part_table:
 	rm -rf bin/mbr_part_table.bin
@@ -40,7 +41,7 @@ clean_mbr_part_table:
 	rm -rf bin/mbr_part_table.out
 
 bin/mbr_part_table.bin: clean_mbr_part_table
-	nasm boot/test.s -f elf32 -o bin/test.o
+	nasm include/protocol/protocol_util.s -f elf32 -o bin/protocol_util.o
 	g++ $(FLAGS) -I include/ boot/mbr_part_table.cpp -o bin/mbr_part_table.o
 	ld -m elf_i386 -Tlinker/mbr_part_table.ld -nostdlib --nmagic -o bin/mbr_part_table.out bin/mbr_part_table.o
 	objcopy -O binary bin/mbr_part_table.out bin/mbr_part_table.bin
@@ -52,7 +53,7 @@ clean_fs_worker:
 
 bin/fs_worker.bin: clean_fs_worker
 	g++ $(FLAGS) -I include/ -o bin/fs_worker.o boot/fs_worker.cpp
-	ld -m elf_i386 -Tlinker/fs_worker.ld -nostdlib --nmagic -o bin/fs_worker.out bin/fs_worker.o
+	ld -m elf_i386 -Tlinker/fs_worker.ld -nostdlib --nmagic -o bin/fs_worker.out bin/fs_worker.o bin/protocol_util.o
 	objcopy -O binary bin/fs_worker.out bin/fs_worker.bin
 
 clean_second_stage:
@@ -62,7 +63,7 @@ clean_second_stage:
 
 bin/second_stage.bin: clean_second_stage
 	g++ $(FLAGS) -I include/ -o bin/second_stage.o boot/second_stage.cpp
-	ld -m elf_i386 -Tlinker/second_stage.ld -nostdlib --nmagic -o bin/second_stage.out bin/second_stage.o
+	ld -m elf_i386 -Tlinker/second_stage.ld -nostdlib --nmagic -o bin/second_stage.out bin/second_stage.o bin/protocol_util.o
 	objcopy -O binary bin/second_stage.out bin/second_stage.bin
 
 clean:

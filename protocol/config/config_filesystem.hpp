@@ -7,12 +7,17 @@ using namespace ConfigDiskImage;
 
 namespace ConfigFilesystem
 {
-    uint8 kernel_bin_path[40] = "../../%s";
+    //uint8 kernel_bin_path[40] = "../../%s";
 
     /* `kernel_bin_path` is the "formatter" that `abs_kernel_bin_path`
      * will be formatted with.
      * */
-    uint8 abs_kernel_bin_path[40];
+    //uint8 abs_kernel_bin_path[40];
+
+    cpint8 kernel_linker_file = (cpint8) initiate_path((pint8) "../linker/", (pint8)"kernel.ld");
+    cpint8 kernel_linker_format = (cpint8) initiate_path((pint8) "formats/", (pint8)"kernel_linker_format");
+
+    constexpr uint32 initial_fs_size = 1024;
 
     class config_famp_fs
     {
@@ -119,6 +124,29 @@ namespace ConfigFilesystem
             fclose(filesystem_binary);
 
             delete kernel_data;
+
+            uint8 format[500];
+            memset(format, 0, 500);
+
+            FILE *fformat = fopen(kernel_linker_format, "rb");
+            FAMP_ASSERT(fformat,
+                "\nError opening `%s`\n", kernel_linker_format)
+            
+            fseek(fformat, 0, SEEK_END);
+            size_t size = ftell(fformat);
+            fseek(fformat, 0, SEEK_SET);
+
+            puint8 raw_format = new uint8[size];
+            fread(raw_format, size, sizeof(*raw_format), fformat);
+
+            fclose(fformat);
+
+            sprintf((pint8) format, (cpint8) raw_format,
+                FAMP_FS_KERNEL_VIRTUAL_ADDRESS + (initial_fs_size + kernel_bin_size));
+            fformat = fopen(kernel_linker_file, "wb");
+            fwrite(format, strlen((pint8) format), sizeof(*raw_format), fformat);
+            fclose(fformat);
+            delete raw_format;
         }
 
         ~config_famp_fs()

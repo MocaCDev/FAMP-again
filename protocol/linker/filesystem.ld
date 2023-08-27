@@ -1,14 +1,10 @@
 ENTRY(main)
 SECTIONS {
     /* Program starts at 0x0700. */
-    . = 0xB000;
+    . = 0xF000;
 
-    filesystem = 0x8200;
-
-    .text : AT(0xB000)
+    .text : AT(0xF000)
     {
-        *(__start*);
-        *(.text*);
     }
 
     .data :

@@ -10,7 +10,7 @@ uint32 FAMP_FS_PARTITION_BEGIN_SIG          = 0x50424547;   /* "PBEG" */
 
 /* Initial address of the FS. */
 #define FAMP_FS_INITIAL_ADDRESS             0x8200
-#define FAMP_FS_KERNEL_VIRTUAL_ADDRESS      (uint32) 0x80000000
+#define FAMP_FS_KERNEL_VIRTUAL_ADDRESS      0x80000000
 
 /* Kernel partition name. */
 constexpr uint8 FAMP_FS_KERNEL_PART_NAME[6] = {'K', 'E', 'R', 'N', 'E', 'L'};
@@ -57,8 +57,8 @@ namespace FAMP_FS
      * */
     enum class PartitionType
     {
-        Code,
-        Data
+        Code = 0x0,
+        Data = 0x1
     };
 
     /* Partition address type.
@@ -67,8 +67,8 @@ namespace FAMP_FS
      * */
     enum class PartitionAddressType
     {
-        Physcial,
-        Virtual
+        Physcial = 0x0,
+        Virtual  = 0x1
     };
 
     /* What identity messed with the partition.
@@ -76,7 +76,7 @@ namespace FAMP_FS
      * */
     enum class PartitionIdentity
     {
-        Protocol,
+        Protocol = 0x1,
         User,
         Kernel
     };
@@ -85,7 +85,7 @@ namespace FAMP_FS
      * */
     enum class RelocationAction
     {
-        Relocate,               /* If this is set, this tells the protocol (OS) that the partition (file) is being temporarily relocated, and that `RelocateBack` will occur. */
+        Relocate = 0x1,               /* If this is set, this tells the protocol (OS) that the partition (file) is being temporarily relocated, and that `RelocateBack` will occur. */
         RelocateAndStay,        /* If this is set, this tells the protocol (OS) that the partition (file) is being permanently relocated. */
         RelocateBack            /* If this is set, this tells the protocol (OS) that the partition (file) can be loaded into its original address. */
     };
