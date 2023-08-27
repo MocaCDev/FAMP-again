@@ -166,12 +166,11 @@ namespace ConfigFiles
                     sprintf((pint8) completed_format, (cpint8) format,
                         os_name, yod.type, yod.OS_version,
                         yod.FS_type, yod.in_production,
-                        fbin_size / 512,
                         0x2 + (fbin_size / 512),
                         0x2 + (fbin_size / 512) + 0x3,
                         (0x5 + (fbin_size / 512)) + 0x2,
-                        (0x5 + (fbin_size / 512)) + 0x2,
-                        (0x5 + (fbin_size / 512)) + 0x2 + (fbin_size / 512),
+                        0x2,
+                        0x2 + (fbin_size / 512),
                         (fbin_size / 512));
 
                     goto write;

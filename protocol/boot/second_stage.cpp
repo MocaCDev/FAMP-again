@@ -50,7 +50,7 @@ void __START main()
     __asm__("jmp 0x8:0x1000");*/
     //__prepare_jump_to_pmode();
     //__load_gdt();
-
+ 
     puint8 addr = (puint8) 0xF000;
     //addr[0] = 'A';
 

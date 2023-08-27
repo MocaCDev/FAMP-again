@@ -15,6 +15,9 @@ FAMP_spec_MBR_header:
 	.in_production				db 0x%X
     .end                        db 'EE', 0x0, 0x0
 
+%%define FS_STARTING_SECTOR		byte [0x7DD9]	; mbr_partition_entry.starting_sector_and_cylinder
+%%define FS_SECTOR_AMMOUNT		byte [0x7DCF]	; mbr_partition_entry.sector_amnt
+
 struc mbr_partition_table_entry
 	; Is this MBR partition table entry bootable?(is it describing the rest of the bootloader?)
 	; 0x80 = bootable, 0x0 = not bootable
@@ -82,9 +85,9 @@ start:
 	mov bx, 0xF000
 
 	mov ah, 0x02
-	mov al, 0x%X
+	mov al, FS_STARTING_SECTOR
 	mov ch, 0x00
-	mov cl, 0x02
+	mov cl, FS_SECTOR_AMMOUNT
 	mov dh, 0x00
 	mov dl, 0x80
 	int 0x13

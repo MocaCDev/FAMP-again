@@ -242,14 +242,10 @@ namespace ConfigDiskImage
 
                             FAMP_ASSERT(pentry->bootable_entry == ENTRY_IS_BOOTABLE,
                                 "\nError with first entry in the MBR partition table entry:\n\tThe entry was marked not bootable.\n")
-                            //FAMP_ASSERT(pentry->starting_sector == 0x05,
-                            //    "\nError with first entry in the MBR partition table entry:\n\tThe second stage gets read in from the third to fifth sector.\n\tThis data was not found in the entry description.\n")
                             FAMP_ASSERT(pentry->entry_type == ENTRY_TYPE_SS,
                                 "\nError with first entry in the MBR partition table entry:\n\tThe second stage entry type that gets referenced by the partition entry was not found to be 0x0E.\n")
                             FAMP_ASSERT(pentry->auto_read_program == true,
                                 "\nError with first entry in the MBR partition table entry:\n\tThe second stage program is auto read by the MBR partition table C++ program.\n\tIt was found to be set to false in the entry.\n")
-                            //FAMP_ASSERT(pentry->last_sector == 0x07,
-                            //    "\nError with first entry in the MBR partition table entry:\n\tThe second stage bootloader consists of two sectors (from the third to the fifth).\n\tThis data was not found in the entry.")
                         }
 
                         {
@@ -266,16 +262,13 @@ namespace ConfigDiskImage
 
                             FAMP_ASSERT(pentry->bootable_entry != ENTRY_IS_BOOTABLE,
                                 "\nError with the second entry in the MBR partition table:\n\tThe second entry describes the FileSystem (FS) and should not be bootable.\n")
-                            FAMP_ASSERT(pentry->starting_sector == prev_entry.last_sector,  /* +1 is due to the fact there is a program residing in a sector between second stage bootloader and the read-in FS. */
+                            FAMP_ASSERT(pentry->starting_sector == 0x02,
                                 "\nError with the second entry in the MBR partition table:\n\tThe starting sector of the FileSystem (FS) is not aligned with the last sector of the first MBR partition table entry.\n")
                             FAMP_ASSERT(pentry->sector_amnt == fs,
                                 "\nError with the second entry in the MBR partition table entry:\n\tThe sector size does not match the sector size of the binary file `%s`.\n",
                                 fs_bin)
                             FAMP_ASSERT(pentry->auto_read_program == true,
                                 "\nError with the second entry in the MBR partition table entry:\n\tThe FileSystem (FS) is auto read by the MBR partition table C++ program.\n")
-                            FAMP_ASSERT(pentry->last_sector == pentry->starting_sector + pentry->sector_amnt,
-                                "\nError with the second entry in the MBR partition table:\n\tThe ending sector of the partition entry did not match the amount of sectors the partition consists of, being 0x%X (%d).\n",
-                                pentry->sector_amnt, pentry->sector_amnt)
                             FAMP_ASSERT(pentry->entry_type == ENTRY_TYPE_FILESYSTEM,
                                 "\nError with the second entry in the MBR partition table entry:\n\tThe entry type did was not found to represent the FileSystem (FS), of which the second entry of the MBR partition table\n\tshould represent.\n")
                         }
@@ -293,8 +286,8 @@ namespace ConfigDiskImage
                             i++;
                             goto reloop;
                         }
+                        
                         outside:
-
                         delete pentry;
 
                         disk_image_size += 512;
